@@ -1,0 +1,4 @@
+mvn compile
+mvn package
+spark-submit --class distributed_newton_star.App --master local[4] target/distributed_newton_star-0.0.1-SNAPSHOT.jar
+
