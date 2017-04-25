@@ -19,6 +19,8 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
   val tmpZ = new DenseMatrix[Double](numberPartitions, numberFeatures)
 
   setLaplacianMatrix()
+  val rDDPPrimalDual = computeRDDPPrimalDual()
+  val localPPrimalDualCollect = rDDPPrimalDual.collect()
 
   def parseFile(filePath: String, minPartitions: Int) = {
     ClusterConfiguration.sc.textFile(filePath, minPartitions).map(v => {
@@ -36,13 +38,12 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
       updateLambda()
       println("iteration " + iteration)
       println(yPrimal)
+      println("Consensur Error: " + computeConsesusError(yPrimal))
       println("-------------------------------")
     }
   }
 
   def updateLambda() {
-    val rDDPPrimalDual = computeRDDPPrimalDual()
-    val localPPrimalDualCollect = rDDPPrimalDual.collect()
     setQPrimalDual()
     val rDDYPrimal = computeRDDYPrimal(localPPrimalDualCollect)
     collectYPrimal(rDDYPrimal)
@@ -53,11 +54,11 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
     val hessianDirection = computeHessianDirection(qConcatenate)
     updateLambdaDirection(hessianDirection)
   }
-  
+
   def onePerpProjection(matrix: DenseMatrix[Double]) {
-    for(j <- 0 until matrix.cols) {
+    for (j <- 0 until matrix.cols) {
       val sumI = sum(matrix(::, j))
-      for(i <- 0 until matrix.rows) {
+      for (i <- 0 until matrix.rows) {
         matrix(i, j) -= sumI / matrix.rows
       }
     }
@@ -87,6 +88,24 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
         qPrimalDual(indexPartition, indexFeature) = degree * lambdaDual(indexPartition, indexFeature) + sumNeighborsLambda
       }
     }
+  }
+
+  def localError(vector: DenseVector[Double]) = {
+    val averageJ = sum(vector) / vector.length
+    var maximumValue = Math.abs(vector(0) - averageJ)
+    for (i <- 1 until vector.length) {
+      val v = Math.abs(vector(i) - averageJ)
+      maximumValue = Math.max(v, maximumValue)
+    }
+    maximumValue
+  }
+
+  def computeConsesusError(matrix: DenseMatrix[Double]) = {
+    var error = Double.NegativeInfinity
+    for (i <- 0 until matrix.cols) {
+      error = Math.max(error, localError(matrix(::, i)))
+    }
+    error
   }
 
   def computeRDDYPrimal(localPPrimalDualCollect: Array[(Int, DenseMatrix[Double])]) = {
