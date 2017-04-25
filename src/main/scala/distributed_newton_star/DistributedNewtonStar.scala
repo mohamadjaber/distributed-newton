@@ -29,24 +29,28 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
   }
 
   def learning(steps: Int) {
+    println("Initial features")
     println(yPrimal)
+    println("-------------------------------")
     for (iteration <- 0 until steps) {
       updateLambda()
       println("iteration " + iteration)
+      println(yPrimal)
+      println("-------------------------------")
     }
-    println(yPrimal)
   }
 
   def updateLambda() {
     val rDDPPrimalDual = computeRDDPPrimalDual()
     val localPPrimalDualCollect = rDDPPrimalDual.collect()
+    setQPrimalDual()
     val rDDYPrimal = computeRDDYPrimal(localPPrimalDualCollect)
     collectYPrimal(rDDYPrimal)
     setTmpZ()
     val rDDQ = computeRDDQ(rDDPPrimalDual)
     val qConcatenate = collectQ(rDDQ)
     val hessianDirection = computeHessianDirection(qConcatenate)
-    updateLambdaDirection(lambdaDual, hessianDirection)
+    updateLambdaDirection(hessianDirection)
   }
 
   def computeRDDPPrimalDual() = {
@@ -142,7 +146,7 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
   /**
    * TODO: to be parallelized
    */
-  def updateLambdaDirection(lambdaDual: DenseMatrix[Double], hessianDirection: DenseMatrix[Double]) {
+  def updateLambdaDirection(hessianDirection: DenseMatrix[Double]) {
     for (i <- 0 until lambdaDual.rows) {
       for (j <- 0 until lambdaDual.cols) {
         lambdaDual(i, j) += hessianDirection(i, j) * eta
