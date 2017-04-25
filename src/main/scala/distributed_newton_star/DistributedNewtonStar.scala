@@ -49,8 +49,18 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
     setTmpZ()
     val rDDQ = computeRDDQ(rDDPPrimalDual)
     val qConcatenate = collectQ(rDDQ)
+    onePerpProjection(qConcatenate)
     val hessianDirection = computeHessianDirection(qConcatenate)
     updateLambdaDirection(hessianDirection)
+  }
+  
+  def onePerpProjection(matrix: DenseMatrix[Double]) {
+    for(j <- 0 until matrix.cols) {
+      val sumI = sum(matrix(::, j))
+      for(i <- 0 until matrix.rows) {
+        matrix(i, j) -= sumI / matrix.rows
+      }
+    }
   }
 
   def computeRDDPPrimalDual() = {
