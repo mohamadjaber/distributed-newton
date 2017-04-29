@@ -1,4 +1,4 @@
-package distributed_newton_star
+package distributed_newton_star.examples
 
 import java.io._
 

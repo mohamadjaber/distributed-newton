@@ -3,11 +3,14 @@ package distributed_newton_star
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
 
-import scala.math._
 import breeze.linalg._
 import breeze.numerics._
 
-class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: String) extends Serializable {
+abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
+                                          eta: Double,
+                                          stepSize: Double,
+                                          inputFilePath: String) extends Serializable {
+
   val rddData = parseFile(inputFilePath, minNbPartitions).cache()
   val numberPartitions = rddData.getNumPartitions
   val numberFeatures = rddData.first()._2.size
@@ -19,8 +22,11 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
   val tmpZ = new DenseMatrix[Double](numberPartitions, numberFeatures)
 
   setLaplacianMatrix()
-  val rDDPPrimalDual = computeRDDPPrimalDual()
-  val localPPrimalDualCollect = rDDPPrimalDual.collect()
+
+  // abstract methods
+  def computeYPrimal()
+  def updateLambda()
+  def computeQHessian(): DenseMatrix[Double]
 
   def parseFile(filePath: String, minPartitions: Int) = {
     ClusterConfiguration.sc.textFile(filePath, minPartitions).map(v => {
@@ -43,18 +49,6 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
     }
   }
 
-  def updateLambda() {
-    setQPrimalDual()
-    val rDDYPrimal = computeRDDYPrimal()
-    collectYPrimal(rDDYPrimal)
-    setTmpZ()
-    val rDDQ = computeRDDQ(rDDPPrimalDual)
-    val qConcatenate = collectQ(rDDQ)
-    onePerpProjection(qConcatenate)
-    val hessianDirection = computeHessianDirection(qConcatenate)
-    updateLambdaDirection(hessianDirection)
-  }
-
   def onePerpProjection(matrix: DenseMatrix[Double]) {
     for (j <- 0 until matrix.cols) {
       val sumI = sum(matrix(::, j))
@@ -62,16 +56,6 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
         matrix(i, j) -= sumI / matrix.rows
       }
     }
-  }
-
-  def computeRDDPPrimalDual() = {
-    rddData.mapPartitionsWithIndex((partitionId, iterator) => {
-      iterator.map(row => {
-       // val input = DenseMatrix(numberFeatures, 1, row._2)
-        //val inputT = new DenseMatrix(1, numberFeatures, row._2)
-        (partitionId, row._2 * row._2.t)
-      })
-    }, true).reduceByKey(_ + _).mapValues(_ + identity)
   }
 
   def setQPrimalDual() {
@@ -108,28 +92,7 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
     error
   }
 
-  def computeRDDYPrimal() = {
-    rddData.mapPartitionsWithIndex((partitionId, iterator) => {
-      iterator.map(row => {
-        val inputOutput = row._1 * row._2.t
-        (partitionId, inputOutput)
-      })
-    }, true).reduceByKey(_ + _).map(v => {
-      val partitionId = v._1
-      (partitionId, inv(localPPrimalDualCollect(partitionId)._2) * (v._2 - 0.5 * qPrimalDual(partitionId, ::)).t)
-    })
-  }
-
-  def collectYPrimal(rDDYPrimal: RDD[(Int, DenseMatrix[Double])]) {
-    val yPrimalCollect = rDDYPrimal.collect()
-    for (i <- 0 until numberPartitions) {
-      for (j <- 0 until numberFeatures) {
-        yPrimal(i, j) = yPrimalCollect(i)._2(j, 0)
-      }
-    }
-  }
-
-  def setTmpZ() {
+  def computeTmpZ() {
     for (i <- 0 until numberFeatures) {
       val laplacianYi = laplacianMatrix * yPrimal(::, i)
       val tmpZI = starSDDSolver(laplacianYi, laplacianMatrix)
@@ -137,21 +100,6 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
         tmpZ(j, i) = tmpZI(j)
       }
     }
-  }
-
-  def computeRDDQ(rDDPPrimalDual: RDD[(Int, DenseMatrix[Double])]) = {
-    rDDPPrimalDual.mapPartitionsWithIndex((partitionID, iterator) => {
-      iterator.map(row => 2.0 * row._2 * tmpZ(partitionID, ::).t)
-    }, true)
-  }
-
-  def collectQ(rDDQ: RDD[DenseVector[Double]]) = {
-    val qCollect = rDDQ.collect()
-    var qConcatenate = DenseMatrix(qCollect(0).copy)
-    for (i <- 1 until qCollect.length) {
-      qConcatenate = DenseMatrix.vertcat(qConcatenate, DenseMatrix(qCollect(i)))
-    }
-    qConcatenate
   }
 
   def computeHessianDirection(qConcatenate: DenseMatrix[Double]) = {
@@ -189,6 +137,14 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
     uNVector(0) = uNVector(0) * tmp
     (laplacianMatrix * outputVector) +
       ((1.0 - numberPartitions * numberPartitions) / numberPartitions) * ((uNVector.t) * (uNVector * outputVector))
+  }
+
+  def fillRandomMatrix(matrix: DenseMatrix[Double]) {
+    for (i <- 0 until matrix.rows) {
+      for (j <- 0 until matrix.cols) {
+        matrix(i, j) = Math.random()
+      }
+    }
   }
 
 }
