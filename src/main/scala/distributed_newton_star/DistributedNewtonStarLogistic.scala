@@ -7,7 +7,7 @@ import scala.math._
 import breeze.linalg._
 import breeze.numerics._
 
-class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: String) extends Serializable {
+class DistributedNewtonStarLogistic(minNbPartitions: Int, eta: Double, inputFilePath: String) extends Serializable {
   val rddData = parseFile(inputFilePath, minNbPartitions).cache()
   val numberPartitions = rddData.getNumPartitions
   val numberFeatures = rddData.first()._2.size
@@ -18,9 +18,12 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
   val yPrimal = DenseMatrix.zeros[Double](numberPartitions, numberFeatures)
   val tmpZ = new DenseMatrix[Double](numberPartitions, numberFeatures)
 
+  val iterationLocalHessian = 4
+  val alpha = 0.1
+
   setLaplacianMatrix()
-  val rDDPPrimalDual = computeRDDPPrimalDual()
-  val localPPrimalDualCollect = rDDPPrimalDual.collect()
+  // val rDDPPrimalDual = computeRDDPPrimalDual()
+  // val localPPrimalDualCollect = rDDPPrimalDual.collect()
 
   def parseFile(filePath: String, minPartitions: Int) = {
     ClusterConfiguration.sc.textFile(filePath, minPartitions).map(v => {
@@ -45,11 +48,9 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
 
   def updateLambda() {
     setQPrimalDual()
-    val rDDYPrimal = computeRDDYPrimal()
-    collectYPrimal(rDDYPrimal)
+    val rddHessianF = computeYPrimal()
     setTmpZ()
-    val rDDQ = computeRDDQ(rDDPPrimalDual)
-    val qConcatenate = collectQ(rDDQ)
+    val qConcatenate = computeQ(rddHessianF)
     onePerpProjection(qConcatenate)
     val hessianDirection = computeHessianDirection(qConcatenate)
     updateLambdaDirection(hessianDirection)
@@ -67,8 +68,6 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
   def computeRDDPPrimalDual() = {
     rddData.mapPartitionsWithIndex((partitionId, iterator) => {
       iterator.map(row => {
-       // val input = DenseMatrix(numberFeatures, 1, row._2)
-        //val inputT = new DenseMatrix(1, numberFeatures, row._2)
         (partitionId, row._2 * row._2.t)
       })
     }, true).reduceByKey(_ + _).mapValues(_ + identity)
@@ -108,16 +107,62 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
     error
   }
 
-  def computeRDDYPrimal() = {
+  def computeRDDGradientF() = {
     rddData.mapPartitionsWithIndex((partitionId, iterator) => {
       iterator.map(row => {
-        val inputOutput = row._1 * row._2.t
-        (partitionId, inputOutput)
+        val dotProduct = yPrimal(partitionId, ::).t dot row._2
+        val innerSumRow = (1.0 / (
+          1.0 + scala.math.exp(-dotProduct)) + row._1) * row._2
+        (partitionId, innerSumRow)
       })
     }, true).reduceByKey(_ + _).map(v => {
       val partitionId = v._1
-      (partitionId, inv(localPPrimalDualCollect(partitionId)._2) * (v._2 - 0.5 * qPrimalDual(partitionId, ::)).t)
+      (partitionId, v._2 + (2.0 * eta * yPrimal(partitionId, ::).t) + qPrimalDual(partitionId, ::).t)
     })
+  }
+
+  def computeRDDHessianF() = {
+    rddData.mapPartitionsWithIndex((partitionId, iterator) => {
+      iterator.map(row => {
+        val dotProduct = yPrimal(partitionId, ::).t dot row._2
+        val innerSumRow = (1.0 / (
+          scala.math.pow(1.0 + scala.math.exp(-dotProduct), 2))) * row._2 * row._2.t
+        (partitionId, innerSumRow)
+      })
+    }, true).reduceByKey(_ + _).map(v => {
+      val partitionId = v._1
+      (partitionId, v._2 + (2.0 * eta * identity))
+    })
+  }
+
+  def computeYPrimal() = {
+    fillRandomMatrix(yPrimal)
+    var rddHessianF: RDD[(Int, DenseMatrix[Double])] = null
+    for (itr <- 0 until iterationLocalHessian) {
+      val gradientF = computeRDDGradientF().collect()
+      rddHessianF = computeRDDHessianF()
+      if (itr == iterationLocalHessian - 1) {
+        rddHessianF.cache() // cache to be used when computing q from z
+      }
+      val hessianInverseF = rddHessianF.mapValues(v => inv(v)).collect()
+
+      for (i <- 0 until numberPartitions) {
+        // TODO to parallelize
+        val productHessianInverseGradient = hessianInverseF(i)._2 * gradientF(i)._2
+        for (j <- 0 until numberFeatures) {
+          yPrimal(i, j) = yPrimal(i, j) - (alpha * productHessianInverseGradient(j))
+        }
+      }
+    }
+    rddHessianF
+  }
+
+  def fillRandomMatrix(matrix: DenseMatrix[Double]) {
+    for (i <- 0 until matrix.rows) {
+      for (j <- 0 until matrix.cols) {
+        matrix(i, j) = Math.random()
+      }
+    }
   }
 
   def collectYPrimal(rDDYPrimal: RDD[(Int, DenseMatrix[Double])]) {
@@ -145,8 +190,12 @@ class DistributedNewtonStar(minNbPartitions: Int, eta: Double, inputFilePath: St
     }, true)
   }
 
-  def collectQ(rDDQ: RDD[DenseVector[Double]]) = {
-    val qCollect = rDDQ.collect()
+  def computeQ(rddHessianF: RDD[(Int, DenseMatrix[Double])]) = {
+    val qCollect = rddHessianF.mapPartitionsWithIndex((partitionId, iterator) => {
+      iterator.map(v => {
+        v._2 * tmpZ(v._1, ::).t
+      })
+    }, true).collect()
     var qConcatenate = DenseMatrix(qCollect(0).copy)
     for (i <- 1 until qCollect.length) {
       qConcatenate = DenseMatrix.vertcat(qConcatenate, DenseMatrix(qCollect(i)))
