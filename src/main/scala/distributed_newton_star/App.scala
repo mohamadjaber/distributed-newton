@@ -5,9 +5,14 @@ package distributed_newton_star
  */
 object App {
   def main(args: Array[String]) {
-    // val dts = new DistributedNewtonStarGraphLinear(4, 0.01, 0.005, "input/test-star-input")
-    val dts = new DistributedNewtonStarGraphLogistic(4, 0.3, 0.001, 0.5, 40, "input/train-labels-formatted")
-    // val dts = new DistributedNewtonStarGraphLogistic(4, 0.3, 0.005, 0.1, 50, "input/logistic-test")
-    dts.learning(1000)
+    val eta = 0.1
+    val globalStepSize = 0.005
+    val localStepSizeLogistic = 0.5
+    val innerIterationLogistic = 100
+
+    // val dts = new DistributedNewtonStarGraphLinear(4, eta, learningRate, "input/test-star-input")
+    val dts = new DistributedNewtonStarGraphLogistic(4, eta, globalStepSize, localStepSizeLogistic, innerIterationLogistic, "input/train-labels-formatted")
+    // val dts = new DistributedNewtonStarGraphLogistic(4, eta, learningRate, alpha, innerIterationLogistic, "input/logistic-test")
+    dts.learning(100)
   }
 }
