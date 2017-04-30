@@ -25,8 +25,17 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
 
   // abstract methods
   def computeYPrimal()
-  def updateLambda()
   def computeQHessian(): DenseMatrix[Double]
+
+  def updateLambda() {
+    setQPrimalDual()
+    computeYPrimal()
+    computeTmpZ()
+    val qConcatenate = computeQHessian()
+    onePerpProjection(qConcatenate)
+    val hessianDirection = computeHessianDirection(qConcatenate)
+    updateLambdaDirection(hessianDirection)
+  }
 
   def parseFile(filePath: String, minPartitions: Int) = {
     ClusterConfiguration.sc.textFile(filePath, minPartitions).map(v => {
@@ -63,13 +72,11 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
       for (indexFeature <- 0 until numberFeatures) {
         val degree = if (indexPartition == 0) numberPartitions - 1 else 1
         val sumNeighborsLambda = if (indexPartition == 0) {
-          var lambdaNeighbors = lambdaDual(::, indexFeature)
-          lambdaNeighbors = lambdaNeighbors(1 until numberPartitions)
-          lambdaNeighbors.reduce(_ + _)
+          sum(lambdaDual(::, indexFeature)) - lambdaDual(0, indexFeature)
         } else {
           lambdaDual(0, indexFeature)
         }
-        qPrimalDual(indexPartition, indexFeature) = degree * lambdaDual(indexPartition, indexFeature) + sumNeighborsLambda
+        qPrimalDual(indexPartition, indexFeature) = degree * lambdaDual(indexPartition, indexFeature) - sumNeighborsLambda
       }
     }
   }
@@ -126,7 +133,7 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
   def updateLambdaDirection(hessianDirection: DenseMatrix[Double]) {
     for (i <- 0 until lambdaDual.rows) {
       for (j <- 0 until lambdaDual.cols) {
-        lambdaDual(i, j) += hessianDirection(i, j) * eta
+        lambdaDual(i, j) += hessianDirection(i, j) * stepSize
       }
     }
   }

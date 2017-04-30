@@ -54,13 +54,4 @@ class DistributedNewtonStarGraphLinear(minNbPartitions: Int,
     })
   }
 
-  def updateLambda() {
-    setQPrimalDual()
-    computeYPrimal()
-    computeTmpZ()
-    val qConcatenate = computeQHessian()
-    onePerpProjection(qConcatenate)
-    val hessianDirection = computeHessianDirection(qConcatenate)
-    updateLambdaDirection(hessianDirection)
-  }
 }

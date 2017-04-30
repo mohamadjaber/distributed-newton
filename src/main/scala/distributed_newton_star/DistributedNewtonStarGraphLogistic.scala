@@ -14,17 +14,7 @@ class DistributedNewtonStarGraphLogistic(minNbPartitions: Int,
     extends DistributedNewtonStarGraph(minNbPartitions, eta, stepSize, inputFilePath) {
 
   var rddHessianF: RDD[(Int, DenseMatrix[Double])] = _
-
-  def updateLambda() {
-    setQPrimalDual()
-    computeYPrimal()
-    computeTmpZ()
-    val qConcatenate = computeQHessian()
-    onePerpProjection(qConcatenate)
-    val hessianDirection = computeHessianDirection(qConcatenate)
-    updateLambdaDirection(hessianDirection)
-  }
-
+  
   def computeYPrimal() {
     fillRandomMatrix(yPrimal)
     for (itr <- 0 until iterationLocalHessian) {
