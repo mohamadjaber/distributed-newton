@@ -134,7 +134,7 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
   def starSDDSolver(outputVector: DenseVector[Double], laplacianMatrix: DenseMatrix[Double]) = {
     val tmp = 1.0 / sqrt(numberPartitions * (numberPartitions - 1))
     val uNVector = DenseVector.ones[Double](numberPartitions).map(x => -tmp)
-    uNVector(0) = uNVector(0) * tmp
+    uNVector(0) = uNVector(0) * (1 - numberPartitions)
     (laplacianMatrix * outputVector) +
       ((1.0 - numberPartitions * numberPartitions) / numberPartitions) * ((uNVector.t) * (uNVector * outputVector))
   }
