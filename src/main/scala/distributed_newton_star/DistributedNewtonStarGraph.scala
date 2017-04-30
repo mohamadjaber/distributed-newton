@@ -76,10 +76,10 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
 
   def localError(vector: DenseVector[Double]) = {
     val averageJ = sum(vector) / vector.length
-    var maximumValue = Math.abs(vector(0) - averageJ)
+    var maximumValue = abs(vector(0) - averageJ)
     for (i <- 1 until vector.length) {
-      val v = Math.abs(vector(i) - averageJ)
-      maximumValue = Math.max(v, maximumValue)
+      val v = abs(vector(i) - averageJ)
+      maximumValue = max(v, maximumValue)
     }
     maximumValue
   }
@@ -87,7 +87,7 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
   def computeConsesusError(matrix: DenseMatrix[Double]) = {
     var error = Double.NegativeInfinity
     for (i <- 0 until matrix.cols) {
-      error = Math.max(error, localError(matrix(::, i)))
+      error = max(error, localError(matrix(::, i)))
     }
     error
   }
@@ -132,7 +132,7 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
   }
 
   def starSDDSolver(outputVector: DenseVector[Double], laplacianMatrix: DenseMatrix[Double]) = {
-    val tmp = 1.0 / Math.sqrt(numberPartitions * (numberPartitions - 1))
+    val tmp = 1.0 / sqrt(numberPartitions * (numberPartitions - 1))
     val uNVector = DenseVector.ones[Double](numberPartitions).map(x => -tmp)
     uNVector(0) = uNVector(0) * tmp
     (laplacianMatrix * outputVector) +

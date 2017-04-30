@@ -29,7 +29,7 @@ object TestData {
     
     val numberOfPixels = numberOfRows * numberOfColumns
 
-    for (i <- 0 until 100) { // numberOfImages
+    for (i <- 0 until 20) { // numberOfImages
       if (i % 100 == 0) { System.out.println("Number of images extracted: " + i); }
 
       for (p <- 0 until numberOfPixels) {

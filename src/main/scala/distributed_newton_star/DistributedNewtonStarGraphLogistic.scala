@@ -50,7 +50,7 @@ class DistributedNewtonStarGraphLogistic(minNbPartitions: Int,
       iterator.map(row => {
         val dotProduct = yPrimal(partitionId, ::).t dot row._2
         val innerSumRow = (1.0 / (
-          1.0 + scala.math.exp(-dotProduct)) + row._1) * row._2
+          1.0 + exp(-dotProduct)) + row._1) * row._2
         (partitionId, innerSumRow)
       })
     }, true).reduceByKey(_ + _).map(v => {
@@ -64,7 +64,7 @@ class DistributedNewtonStarGraphLogistic(minNbPartitions: Int,
       iterator.map(row => {
         val dotProduct = yPrimal(partitionId, ::).t dot row._2
         val innerSumRow = (1.0 / (
-          scala.math.pow(1.0 + scala.math.exp(-dotProduct), 2))) * row._2 * row._2.t
+          pow(1.0 + exp(-dotProduct), 2))) * row._2 * row._2.t
         (partitionId, innerSumRow)
       })
     }, true).reduceByKey(_ + _).map(v => {
