@@ -17,6 +17,7 @@ class DistributedNewtonStarGraphLogistic(minNbPartitions: Int,
   
   def computeYPrimal() {
     fillRandomMatrix(yPrimal)
+    val bench : Array[Double] = new Array[Double](iterationLocalHessian) // for debug: asked by Rasul
     for (itr <- 0 until iterationLocalHessian) {
       val gradientF = computeRDDGradientF().collect()
       rddHessianF = computeRDDHessianF()
@@ -32,7 +33,13 @@ class DistributedNewtonStarGraphLogistic(minNbPartitions: Int,
           yPrimal(i, j) = yPrimal(i, j) - (alpha * productHessianInverseGradient(j))
         }
       }
+      bench(itr) = gradientF(0)._2.t * gradientF(0)._2   // for debug: asked by Rasul
     }
+    // for debug: asked by rasul
+    bench.foreach(v => {
+      print(v + " - ")
+    })
+    println("-----------------------------------")
   }
 
   def computeRDDGradientF() = {
