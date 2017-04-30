@@ -9,7 +9,7 @@ class DistributedNewtonStarGraphLinear(minNbPartitions: Int,
                                        inputFilePath: String)
     extends DistributedNewtonStarGraph(minNbPartitions, eta, stepSize, inputFilePath) {
 
-  val rDDPPrimalDual = computeRDDPPrimalDual()
+  val rDDPPrimalDual = computeRDDPPrimalDual().cache()
   val localPPrimalDualCollect = rDDPPrimalDual.collect()
 
   def computeYPrimal() {
@@ -39,7 +39,7 @@ class DistributedNewtonStarGraphLinear(minNbPartitions: Int,
       iterator.map(row => {
         (partitionId, row._2 * row._2.t)
       })
-    }, true).reduceByKey(_ + _).mapValues(_ + identity)
+    }, true).reduceByKey(_ + _).mapValues(_ + identity.map(_ * eta))
   }
 
   def computeRDDYPrimal() = {
