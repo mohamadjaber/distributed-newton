@@ -6,18 +6,22 @@ import breeze.linalg._
 import breeze.numerics._
 
 class DistributedNewtonStarGraphLogistic(minNbPartitions: Int,
-                                         eta: Double,
-                                         stepSize: Double,
-                                         alpha: Double,
-                                         iterationLocalHessian: Int,
-                                         inputFilePath: String)
+  eta: Double,
+  stepSize: Double,
+  alpha: Double,
+  iterationLocalHessian: Int,
+  inputFilePath: String)
     extends DistributedNewtonStarGraph(minNbPartitions, eta, stepSize, inputFilePath) {
 
   var rddHessianF: RDD[(Int, DenseMatrix[Double])] = _
-  
+
+  def computeOutput(input: DenseVector[Double]) = {
+    val sigmoid = 1.0 / (1.0 + exp(-yPrimal(0, ::) * input))
+    round(sigmoid)
+  }
+
   def computeYPrimal() {
     fillRandomMatrix(yPrimal)
-    val bench : Array[Double] = new Array[Double](iterationLocalHessian) // for debug: asked by Rasul
     for (itr <- 0 until iterationLocalHessian) {
       val gradientF = computeRDDGradientF().collect()
       rddHessianF = computeRDDHessianF()
@@ -33,13 +37,7 @@ class DistributedNewtonStarGraphLogistic(minNbPartitions: Int,
           yPrimal(i, j) = yPrimal(i, j) - (alpha * productHessianInverseGradient(j))
         }
       }
-      bench(itr) = gradientF(0)._2.t * gradientF(0)._2   // for debug: asked by Rasul
     }
-    // for debug: asked by rasul
-    bench.foreach(v => {
-      print(v + " - ")
-    })
-    println("-----------------------------------")
   }
 
   def computeRDDGradientF() = {

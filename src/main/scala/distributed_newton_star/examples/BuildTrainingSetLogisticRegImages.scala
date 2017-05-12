@@ -31,9 +31,8 @@ object TestData {
     val numberOfLabels = (inLabel.read() << 24) | (inLabel.read() << 16) | (inLabel.read() << 8) | (inLabel.read())
 
     val numberOfPixels = numberOfRows * numberOfColumns
-    numberOfImages = 20
-
-        
+    numberOfImages = 5000
+    
     val pictures: DenseMatrix[Double] = DenseMatrix.zeros(numberOfImages, numberOfPixels)
     val labels: DenseVector[Double] = DenseVector.zeros(numberOfImages)
 
@@ -48,7 +47,7 @@ object TestData {
       labels(i) = if (label == 0) 0 else 1
     }
 
-    val comp = 50
+    val comp = 20
 
     val picturesPCA = pca(pictures, comp)
     val maxValue = max(picturesPCA)
@@ -71,7 +70,6 @@ object TestData {
     outputFile.close()
   }
   
-  // to be verified with Haitham
   private def pca(data: DenseMatrix[Double], components: Int) = {
     val d = zeroMean(data.t)
     val v = svd(d.t)

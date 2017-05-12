@@ -12,7 +12,7 @@ object BuildInput {
       val x1 = random.nextDouble()
       val x2 = random.nextDouble()
       val x3 = random.nextDouble()
-      val y = x1 + (2 * x2) + (3 * x3)
+      val y = x1 + (2 * x2) + (3 * x3) + random.nextDouble() / 10
       pw.write(x1 + " " + x2 + " "  + x3 + " " + y + "\n")
     }
     pw.close

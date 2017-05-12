@@ -4,9 +4,9 @@ import breeze.linalg._
 import breeze.numerics._
 
 class DistributedNewtonStarGraphLinear(minNbPartitions: Int,
-                                       eta: Double,
-                                       stepSize: Double,
-                                       inputFilePath: String)
+  eta: Double,
+  stepSize: Double,
+  inputFilePath: String)
     extends DistributedNewtonStarGraph(minNbPartitions, eta, stepSize, inputFilePath) {
 
   val rDDPPrimalDual = computeRDDPPrimalDual().cache()
@@ -20,6 +20,10 @@ class DistributedNewtonStarGraphLinear(minNbPartitions: Int,
         yPrimal(i, j) = yPrimalCollect(i)._2(j, 0)
       }
     }
+  }
+
+  def computeOutput(input: DenseVector[Double]) = {
+    yPrimal(0, ::) * input
   }
 
   def computeQHessian() = {
@@ -52,6 +56,7 @@ class DistributedNewtonStarGraphLinear(minNbPartitions: Int,
       val partitionId = v._1
       (partitionId, inv(localPPrimalDualCollect(partitionId)._2) * (v._2 - 0.5 * qPrimalDual(partitionId, ::)).t)
     })
+
   }
 
 }

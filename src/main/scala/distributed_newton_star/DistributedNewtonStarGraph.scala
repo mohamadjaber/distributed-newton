@@ -26,6 +26,7 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
   // abstract methods
   def computeYPrimal()
   def computeQHessian(): DenseMatrix[Double]
+  def computeOutput(input: DenseVector[Double])
 
   def updateLambda() {
     setQPrimalDual()
@@ -34,6 +35,9 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
     val qConcatenate = computeQHessian()
     onePerpProjection(qConcatenate)
     val hessianDirection = computeHessianDirection(qConcatenate)
+   // println("hessian --------------------")
+   // println(hessianDirection)
+   // readInt
     updateLambdaDirection(hessianDirection)
   }
 
@@ -143,7 +147,7 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
     val uNVector = DenseVector.ones[Double](numberPartitions).map(x => -tmp)
     uNVector(0) = uNVector(0) * (1 - numberPartitions)
     (laplacianMatrix * outputVector) +
-      ((1.0 - numberPartitions * numberPartitions) / numberPartitions) * ((uNVector.t) * (uNVector * outputVector))
+      ((1.0 - numberPartitions * numberPartitions) / numberPartitions)  * ((uNVector.t * outputVector) * (uNVector))
   }
 
   def fillRandomMatrix(matrix: DenseMatrix[Double]) {
