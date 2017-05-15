@@ -1,4 +1,4 @@
-package distributed_newton_star
+package configuration
 
 import org.apache.spark._
 

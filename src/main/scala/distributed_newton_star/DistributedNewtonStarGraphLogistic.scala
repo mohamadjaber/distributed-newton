@@ -15,9 +15,14 @@ class DistributedNewtonStarGraphLogistic(minNbPartitions: Int,
 
   var rddHessianF: RDD[(Int, DenseMatrix[Double])] = _
 
+  def debugGradient() = {
+    val innerSum = rddData.map(item => (computeOutput(item._2) - item._1) * item._2).reduce(_+_)
+    norm(innerSum)
+  }
+
+  
   def computeOutput(input: DenseVector[Double]) = {
-    val sigmoid = 1.0 / (1.0 + exp(-yPrimal(0, ::) * input))
-    round(sigmoid)
+    1.0 / (1.0 + exp(-yPrimal(0, ::) * input))
   }
 
   def computeYPrimal() {

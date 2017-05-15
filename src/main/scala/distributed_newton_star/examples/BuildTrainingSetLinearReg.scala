@@ -2,7 +2,7 @@ package distributed_newton_star.examples
 
 import java.io._
 
-object BuildInput {
+object BuildTrainingSetLinearRegBench {
   def main(args: Array[String]) {
     val pw = new PrintWriter(new File("input/test-star-input"))
     val random = scala.util.Random

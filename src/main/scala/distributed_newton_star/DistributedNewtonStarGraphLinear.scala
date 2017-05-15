@@ -21,6 +21,11 @@ class DistributedNewtonStarGraphLinear(minNbPartitions: Int,
       }
     }
   }
+  
+  def debugGradient() = {
+    val innerSum = rddData.map(item => (computeOutput(item._2) - item._1) * item._2).reduce(_+_)
+    norm(innerSum)
+  }
 
   def computeOutput(input: DenseVector[Double]) = {
     yPrimal(0, ::) * input

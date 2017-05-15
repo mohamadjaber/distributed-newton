@@ -5,11 +5,12 @@ import org.apache.spark.rdd.RDD
 
 import breeze.linalg._
 import breeze.numerics._
+import configuration.ClusterConfiguration
 
 abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
-                                          eta: Double,
-                                          stepSize: Double,
-                                          inputFilePath: String) extends Serializable {
+    eta: Double,
+    stepSize: Double,
+    inputFilePath: String) extends Serializable {
 
   val rddData = parseFile(inputFilePath, minNbPartitions).cache()
   val numberPartitions = rddData.getNumPartitions
@@ -26,7 +27,9 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
   // abstract methods
   def computeYPrimal()
   def computeQHessian(): DenseMatrix[Double]
-  def computeOutput(input: DenseVector[Double])
+  def computeOutput(input: DenseVector[Double]): Double
+
+  def debugGradient(): Double
 
   def updateLambda() {
     setQPrimalDual()
@@ -35,9 +38,6 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
     val qConcatenate = computeQHessian()
     onePerpProjection(qConcatenate)
     val hessianDirection = computeHessianDirection(qConcatenate)
-   // println("hessian --------------------")
-   // println(hessianDirection)
-   // readInt
     updateLambdaDirection(hessianDirection)
   }
 
@@ -50,15 +50,16 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
   }
 
   def learning(steps: Int) {
-    println("Initial features")
-    println(yPrimal)
-    println("-------------------------------")
+    // println("Initial features")
+    // println(yPrimal)
+    // println("-------------------------------")
     for (iteration <- 0 until steps) {
       updateLambda()
-      println("iteration " + iteration)
-      println(yPrimal)
+      println(debugGradient())
+      //  println("iteration " + iteration)
+      println(yPrimal(0, ::))
       println("Consensur Error: " + computeConsesusError(yPrimal))
-      println("-------------------------------")
+      //  println("-------------------------------")
     }
   }
 
@@ -147,7 +148,7 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
     val uNVector = DenseVector.ones[Double](numberPartitions).map(x => -tmp)
     uNVector(0) = uNVector(0) * (1 - numberPartitions)
     (laplacianMatrix * outputVector) +
-      ((1.0 - numberPartitions * numberPartitions) / numberPartitions)  * ((uNVector.t * outputVector) * (uNVector))
+      ((1.0 - numberPartitions * numberPartitions) / numberPartitions) * ((uNVector.t * outputVector) * (uNVector))
   }
 
   def fillRandomMatrix(matrix: DenseMatrix[Double]) {
