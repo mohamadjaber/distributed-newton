@@ -15,7 +15,7 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
   val rddData = parseFile(inputFilePath, minNbPartitions).cache()
   val numberPartitions = rddData.getNumPartitions
   val numberFeatures = rddData.first()._2.size
-  val lambdaDual = DenseMatrix.rand[Double](numberPartitions, numberFeatures)
+  val lambdaDual = DenseMatrix.rand[Double](numberPartitions, numberFeatures) 
   val laplacianMatrix = DenseMatrix.eye[Double](numberPartitions)
   val identity = DenseMatrix.eye[Double](numberFeatures)
   val qPrimalDual = DenseMatrix.zeros[Double](numberPartitions, numberFeatures)
@@ -28,7 +28,7 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
   def computeYPrimal()
   def computeQHessian(): DenseMatrix[Double]
   def computeOutput(input: DenseVector[Double]): Double
-
+  def computeError(): Double
   def debugGradient(): Double
 
   def updateLambda() {
@@ -55,9 +55,11 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
     // println("-------------------------------")
     for (iteration <- 0 until steps) {
       updateLambda()
-      println(debugGradient())
+      println("gradient " + debugGradient())
+      println("Error " + computeError())
+
       //  println("iteration " + iteration)
-      println(yPrimal(0, ::))
+      // println(yPrimal(0, ::))
       println("Consensur Error: " + computeConsesusError(yPrimal))
       //  println("-------------------------------")
     }

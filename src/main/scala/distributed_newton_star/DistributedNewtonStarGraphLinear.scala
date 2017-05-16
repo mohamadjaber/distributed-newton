@@ -22,6 +22,10 @@ class DistributedNewtonStarGraphLinear(minNbPartitions: Int,
     }
   }
   
+  def computeError() = {
+    rddData.map(item => pow(item._1 - yPrimal(0,::) * item._2, 2)).reduce(_ + _)
+  }
+  
   def debugGradient() = {
     val innerSum = rddData.map(item => (computeOutput(item._2) - item._1) * item._2).reduce(_+_)
     norm(innerSum)

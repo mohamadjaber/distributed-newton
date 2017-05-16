@@ -24,6 +24,10 @@ class DistributedNewtonStarGraphLogistic(minNbPartitions: Int,
   def computeOutput(input: DenseVector[Double]) = {
     1.0 / (1.0 + exp(-yPrimal(0, ::) * input))
   }
+  
+  def computeError() = {
+    rddData.map(item => item._1 * log(computeOutput(item._2)) + (1 - item._1) * log(1 - computeOutput(item._2))).reduce(_+_)
+  }
 
   def computeYPrimal() {
     fillRandomMatrix(yPrimal)
@@ -50,7 +54,7 @@ class DistributedNewtonStarGraphLogistic(minNbPartitions: Int,
       iterator.map(row => {
         val dotProduct = yPrimal(partitionId, ::).t dot row._2
         val innerSumRow = (1.0 / (
-          1.0 + exp(-dotProduct)) + row._1) * row._2
+          1.0 + exp(-dotProduct)) - row._1) * row._2
         (partitionId, innerSumRow)
       })
     }, true).reduceByKey(_ + _).map(v => {
@@ -63,7 +67,7 @@ class DistributedNewtonStarGraphLogistic(minNbPartitions: Int,
     rddData.mapPartitionsWithIndex((partitionId, iterator) => {
       iterator.map(row => {
         val dotProduct = yPrimal(partitionId, ::).t dot row._2
-        val innerSumRow = (1.0 / (
+        val innerSumRow = (exp(-dotProduct) / (
           pow(1.0 + exp(-dotProduct), 2))) * row._2 * row._2.t
         (partitionId, innerSumRow)
       })

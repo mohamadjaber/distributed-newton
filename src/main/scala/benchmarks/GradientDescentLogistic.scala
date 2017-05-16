@@ -7,6 +7,9 @@ class GradientDescentLogistic(minNbPartitions: Int,
   stepSize: Double,
   inputFilePath: String) extends GradientDescent(minNbPartitions, eta, stepSize, inputFilePath) {
   
+  def computeError() = {
+    rddData.map(item => item._1 * log(sigmoid(item._2)) + (1 - item._1) * log(1 - sigmoid(item._2))).reduce(_+_)
+  }
   
   def computeGradient() = {
     val innerSum = rddData.map(item => (item._1 - sigmoid(item._2)) * item._2).reduce(_+_)
@@ -19,8 +22,9 @@ class GradientDescentLogistic(minNbPartitions: Int,
   }
   
   def updateTheta() {
-    val gradient = computeGradient()
-    theta = theta + stepSize * gradient
+    val gradient = computeGradient() 
+    theta = theta + stepSize * gradient / (1.0 * numberPoints)
+    println("Error: " + computeError())
     println(norm(gradient - eta * theta))
   }
 }

@@ -7,7 +7,7 @@ import breeze.linalg._
 import java.io.File
 import util.Random._
 
-object TestData {
+object BuildTrainingSetLogisticRegImages {
   def main(args: Array[String]) {
     val fileName = "input/train-labels"
     val in = new Scanner(new File(fileName))
@@ -31,7 +31,7 @@ object TestData {
     val numberOfLabels = (inLabel.read() << 24) | (inLabel.read() << 16) | (inLabel.read() << 8) | (inLabel.read())
 
     val numberOfPixels = numberOfRows * numberOfColumns
-    numberOfImages = 5000
+    numberOfImages = 1000
     
     val pictures: DenseMatrix[Double] = DenseMatrix.zeros(numberOfImages, numberOfPixels)
     val labels: DenseVector[Double] = DenseVector.zeros(numberOfImages)
@@ -44,10 +44,10 @@ object TestData {
         pictures(i, p) = gray
       }
       val label = inLabel.read()
-      labels(i) = if (label == 0) 0 else 1
+      labels(i) = if (label == 0) 1 else 0
     }
 
-    val comp = 20
+    val comp = 20 // pictures.cols
 
     val picturesPCA = pca(pictures, comp)
     val maxValue = max(picturesPCA)

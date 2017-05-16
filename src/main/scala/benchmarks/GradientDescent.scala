@@ -10,9 +10,10 @@ abstract class GradientDescent(minNbPartitions: Int,
     inputFilePath: String) extends Serializable {
 
   val rddData = parseFile(inputFilePath, minNbPartitions).cache()
+  val numberPoints = rddData.collect().size
   val numberPartitions = rddData.getNumPartitions
   val numberFeatures = rddData.first()._2.size
-  var theta = DenseVector.rand[Double](numberFeatures)
+  var theta = DenseVector.rand[Double](numberFeatures) 
 
   def parseFile(filePath: String, minPartitions: Int) = {
     ClusterConfiguration.sc.textFile(filePath, minPartitions).map(v => {
@@ -23,8 +24,8 @@ abstract class GradientDescent(minNbPartitions: Int,
   }
 
   def updateTheta()
-
   def computeGradient(): DenseVector[Double]
+  def computeError(): Double
 
   def learning(steps: Int) {
     // println("Initial parameters")
@@ -32,8 +33,8 @@ abstract class GradientDescent(minNbPartitions: Int,
     // println("-------------------------------")
     for (iteration <- 0 until steps) {
       updateTheta()
-      //  println("iteration " + iteration)
-      println(theta)
+      // println("iteration " + iteration)
+      // println(theta)
     }
   }
 

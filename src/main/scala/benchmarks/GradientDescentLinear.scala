@@ -13,6 +13,10 @@ class GradientDescentLinear(minNbPartitions: Int,
     innerSum + eta * theta
   }
 
+  def computeError() = {
+    rddData.map(item => pow(item._1 - theta.t * item._2, 2)).reduce(_ + _)
+  }
+
   def updateTheta() {
     val gradient = computeGradient()
     theta = theta - stepSize * gradient
