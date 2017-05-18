@@ -9,9 +9,9 @@ object App {
 
   def main(args: Array[String]) {
     val eta = 0.1
-    val stepSizes = Array[Double](0.0000005, 0.00000025, 0.00000025, 0.00000025, 0.0000001, 0.0000001, 0.0000001, 0.00000009, 0.00000008, 0.00000007)
+    val stepSizes = Array[Double](0.0000005, 0.00000025, 0.00000025, 0.00000015, 0.0000001, 0.0000001, 0.0000001, 0.00000009, 0.00000008, 0.00000007)
     val nbPartitions = 8
-    for (i <- 0 until 10) {
+    for (i <- 0 until 10) { 
       val nbFeatures = (i + 1) * 10
       val numberIterations = (i + 1) * 1000
       bench(nbFeatures, eta, stepSizes(i), nbPartitions, numberIterations)
