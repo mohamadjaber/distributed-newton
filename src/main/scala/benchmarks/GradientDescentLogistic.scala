@@ -1,6 +1,7 @@
 package benchmarks
 import breeze.linalg._
 import breeze.numerics._
+import java.io._
 
 class GradientDescentLogistic(minNbPartitions: Int,
   eta: Double,
@@ -21,10 +22,10 @@ class GradientDescentLogistic(minNbPartitions: Int,
     sigmoid
   }
   
-  def updateTheta() {
+  def updateTheta(bench: Array[Array[Double]], step: Int) {
     val gradient = computeGradient() 
     theta = theta + stepSize * gradient / (1.0 * numberPoints)
-    println("Error: " + computeError())
-    println(norm(gradient - eta * theta))
+    bench(step)(0) = norm(gradient - eta * theta) 
+    bench(step)(1) = computeError()
   }
 }

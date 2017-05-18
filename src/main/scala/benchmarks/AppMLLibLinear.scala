@@ -4,6 +4,7 @@ import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.regression.LinearRegressionModel
 import org.apache.spark.mllib.regression.LinearRegressionWithSGD
 import configuration.ClusterConfiguration._
+import org.apache.spark.ml.classification.LogisticRegression
 
 
 /**
@@ -12,7 +13,7 @@ import configuration.ClusterConfiguration._
 object AppMLLibLinear {
   def main(args: Array[String]) {
     // Load and parse the data
-    val data = sc.textFile("input/test-star-input")
+    val data = sc.textFile("input/linear_features_10")
     val parsedData = data.map { line =>
       val parts = line.split("\\s+").map(_.toDouble)
       val len = parts.length
@@ -21,7 +22,7 @@ object AppMLLibLinear {
     }.cache()
 
     // Building the model
-    val numIterations = 10000000
+    val numIterations = 1000
     val stepSize = 10.9
     val model = LinearRegressionWithSGD.train(parsedData, numIterations, stepSize)
 
@@ -33,7 +34,7 @@ object AppMLLibLinear {
     
     println(model.weights)
     
-    val MSE = valuesAndPreds.map { case (v, p) => math.pow((v - p), 2) }.mean()
+    val MSE = valuesAndPreds.map { case (v, p) => math.pow((v - p), 2) }.reduce(_+_)
     println("training Mean Squared Error = " + MSE)
 
     // Save and load model

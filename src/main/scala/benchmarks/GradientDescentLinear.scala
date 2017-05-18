@@ -2,6 +2,7 @@ package benchmarks
 
 import breeze.linalg._
 import breeze.numerics._
+import java.io._
 
 class GradientDescentLinear(minNbPartitions: Int,
     eta: Double,
@@ -14,12 +15,13 @@ class GradientDescentLinear(minNbPartitions: Int,
   }
 
   def computeError() = {
-    rddData.map(item => pow(item._1 - theta.t * item._2, 2)).reduce(_ + _)
+    rddData.map(item => pow(item._1 - theta.t * item._2, 2)).reduce(_+_)
   }
 
-  def updateTheta() {
+  def updateTheta(bench: Array[Array[Double]], step: Int) {
     val gradient = computeGradient()
     theta = theta - stepSize * gradient
-    println(norm(gradient - eta * theta))
+    bench(step)(0) = norm(gradient - eta * theta)
+    bench(step)(1) = computeError()
   }
 }

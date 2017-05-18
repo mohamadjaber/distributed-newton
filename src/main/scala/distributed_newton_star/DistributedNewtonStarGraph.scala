@@ -12,10 +12,10 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
     stepSize: Double,
     inputFilePath: String) extends Serializable {
 
-  val rddData = parseFile(inputFilePath, minNbPartitions).cache()
+  val rddData = parseFile(inputFilePath).repartition(minNbPartitions).cache()
   val numberPartitions = rddData.getNumPartitions
   val numberFeatures = rddData.first()._2.size
-  val lambdaDual = DenseMatrix.rand[Double](numberPartitions, numberFeatures) 
+  val lambdaDual = DenseMatrix.rand[Double](numberPartitions, numberFeatures)
   val laplacianMatrix = DenseMatrix.eye[Double](numberPartitions)
   val identity = DenseMatrix.eye[Double](numberFeatures)
   val qPrimalDual = DenseMatrix.zeros[Double](numberPartitions, numberFeatures)
@@ -41,28 +41,23 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
     updateLambdaDirection(hessianDirection)
   }
 
-  def parseFile(filePath: String, minPartitions: Int) = {
-    ClusterConfiguration.sc.textFile(filePath, minPartitions).map(v => {
+  def parseFile(filePath: String) = {
+    ClusterConfiguration.sc.textFile(filePath).map(v => {
       val split = v.split("\\s+").map(_.toDouble)
       val len = split.length
       (split(len - 1), DenseVector(split.slice(0, len - 1)))
     })
   }
 
-  def learning(steps: Int) {
-    // println("Initial features")
-    // println(yPrimal)
-    // println("-------------------------------")
+  def learning(steps: Int) = {
+    val bench = Array.ofDim[Double](steps, 3) // this array holds gradient, error and consensus error
     for (iteration <- 0 until steps) {
       updateLambda()
-      println("gradient " + debugGradient())
-      println("Error " + computeError())
-
-      //  println("iteration " + iteration)
-      // println(yPrimal(0, ::))
-      println("Consensur Error: " + computeConsesusError(yPrimal))
-      //  println("-------------------------------")
+      bench(iteration)(0) = debugGradient()
+      bench(iteration)(1) = computeError()
+      bench(iteration)(2) = computeConsesusError(yPrimal)
     }
+    bench
   }
 
   def onePerpProjection(matrix: DenseMatrix[Double]) {
