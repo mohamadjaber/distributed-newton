@@ -1,20 +1,26 @@
-package distributed_newton_star
+package benchmarks
 import java.io._
+import distributed_newton_star.DistributedNewtonStarGraph
+import distributed_newton_star.DistributedNewtonStarGraphLinear
+import distributed_newton_star.DistributedNewtonStarGraphLogistic
 
 /**
  * @author ${user.name}
  */
 object App {
+
   def main(args: Array[String]) {
-    val nbFeatures = 10
     val eta = 0.1
     val stepSize = 0.9
-    val nbPartitions = 4
-    val numberIterations = 10
+    val nbPartitions = 8
+    val numberIterations = 100
     val innerIterations = 25
     val innerStepSize = 0.9
-    benchNewtonLinear(nbFeatures, eta, stepSize, nbPartitions, numberIterations)
-    // benchNewtonLogistic(nbFeatures, eta, stepSize, nbPartitions, numberIterations, innerIterations, innerStepSize)
+    for (i <- 0 until 10) {
+      val nbFeatures = (i + 1) * 10
+      benchNewtonLinear(nbFeatures, eta, stepSize, nbPartitions, numberIterations)
+      // benchNewtonLogistic(nbFeatures, eta, stepSize, nbPartitions, numberIterations, innerIterations, innerStepSize)
+    }
   }
 
   def reportBench(nbFeatures: Int, eta: Double, stepSize: Double, nbPartitions: Int, numberIterations: Int, pw: PrintWriter, gdn: DistributedNewtonStarGraph) {
@@ -22,7 +28,7 @@ object App {
     pw.println("# Iteration \t\t Gradient \t\t Error \t\t ConsensusError")
 
     val t0 = System.currentTimeMillis()
-    val bench = gdn.learning(numberIterations)
+    val bench = gdn.learningBench(numberIterations)
     for (i <- 0 until numberIterations) {
       pw.println(i + "\t\t" + bench(i)(0) + "\t\t" + bench(i)(1) + "\t\t" + bench(i)(2))
     }

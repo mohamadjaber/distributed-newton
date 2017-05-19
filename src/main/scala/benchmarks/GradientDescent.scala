@@ -14,7 +14,7 @@ abstract class GradientDescent(minNbPartitions: Int,
   val numberPoints = rddData.collect().size
   val numberPartitions = rddData.getNumPartitions
   val numberFeatures = rddData.first()._2.size
-  var theta = DenseVector.rand[Double](numberFeatures) 
+  var theta = DenseVector.rand[Double](numberFeatures)
 
   def parseFile(filePath: String) = {
     ClusterConfiguration.sc.textFile(filePath).map(v => {
@@ -24,15 +24,24 @@ abstract class GradientDescent(minNbPartitions: Int,
     })
   }
 
-  def updateTheta(bench: Array[Array[Double]], steps: Int)
+  def updateTheta()
+  def updateThetaBench(bench: Array[Array[Double]], steps: Int)
+
   def computeGradient(): DenseVector[Double]
   def computeError(): Double
 
-  def learning(steps: Int) = {
+  def learning(steps: Int) {
+    for (iteration <- 0 until steps) {
+      if ((iteration != 0) && (iteration % 100 == 0)) println("done " + iteration + " iterations")
+      updateTheta()
+    }
+  }
+
+  def learningBench(steps: Int) = {
     val bench = Array.ofDim[Double](steps, 2) // this array holds gradient and error
     for (iteration <- 0 until steps) {
-      if((iteration != 0) && (iteration % 100 == 0)) println("done " + iteration + " iterations")
-      updateTheta(bench, iteration)
+      if ((iteration != 0) && (iteration % 100 == 0)) println("done " + iteration + " iterations")
+      updateThetaBench(bench, iteration)
     }
     bench
   }

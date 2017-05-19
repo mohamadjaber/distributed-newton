@@ -10,6 +10,8 @@ import org.apache.spark.ml.classification.LogisticRegression
 /**
  * @author ${user.name}
  */
+
+@Deprecated
 object AppMLLibLinear {
   def main(args: Array[String]) {
     // Load and parse the data
@@ -36,9 +38,5 @@ object AppMLLibLinear {
     
     val MSE = valuesAndPreds.map { case (v, p) => math.pow((v - p), 2) }.reduce(_+_)
     println("training Mean Squared Error = " + MSE)
-
-    // Save and load model
-     // model.save(sc, "target/tmp/scalaLinearRegressionWithSGDModel1")
-     // val sameModel = LinearRegressionModel.load(sc, "target/tmp/scalaLinearRegressionWithSGDModel1")
   }
 }

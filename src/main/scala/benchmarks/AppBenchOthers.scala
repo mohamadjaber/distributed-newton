@@ -5,8 +5,9 @@ import java.io._
  * @author ${user.name}
  */
 
-object App {
-
+object AppBenchOthers {
+  // Make sure to use learningBench and not learningBench to compute benchmarking values (e.g., error)
+  
   def main(args: Array[String]) {
     val eta = 0.1
     val stepSizes = Array[Double](0.0000005, 0.00000025, 0.00000025, 0.00000015, 0.0000001, 0.0000001, 0.0000001, 0.00000009, 0.00000008, 0.00000007)
@@ -19,13 +20,15 @@ object App {
   }
 
   def bench(nbFeatures: Int, eta: Double, stepSize: Double, nbPartitions: Int, numberIterations: Int) {
-    val pw = new PrintWriter(new File("bench/benchGDLinear_" + nbFeatures + "_" + nbPartitions))
-    val gdl = new GradientDescentLinear(nbPartitions, eta, stepSize, "input/linear_features_" + nbFeatures)
+    // update file name accordingly
+    val pw = new PrintWriter(new File("bench/benchSGDLinear_" + nbFeatures + "_" + nbPartitions)) 
+    // update method accordingly
+    val gdl = new GradientDescentLinearStochastic(nbPartitions, eta, stepSize, "input/linear_features_" + nbFeatures)
     pw.println("# nbFeatures = " + nbFeatures + " - eta = " + eta + " - step size = " + stepSize + " - number Partitions = " + nbPartitions)
     pw.println("# Iteration \t\t Gradient \t\t Error")
 
     val t0 = System.currentTimeMillis()
-    val bench = gdl.learning(numberIterations)
+    val bench = gdl.learningBench(numberIterations)
     val t1 = System.currentTimeMillis()
 
     for (i <- 0 until numberIterations) {

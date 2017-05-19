@@ -49,9 +49,17 @@ abstract class DistributedNewtonStarGraph(minNbPartitions: Int,
     })
   }
 
-  def learning(steps: Int) = {
+  def learning(steps: Int) {
+    for (iteration <- 0 until steps) {
+      if ((iteration != 0) && (iteration % 10 == 0)) println("done " + iteration + " iterations")
+      updateLambda()
+    }
+  }
+
+  def learningBench(steps: Int) = {
     val bench = Array.ofDim[Double](steps, 3) // this array holds gradient, error and consensus error
     for (iteration <- 0 until steps) {
+      if ((iteration != 0) && (iteration % 10 == 0)) println("done " + iteration + " iterations")
       updateLambda()
       bench(iteration)(0) = debugGradient()
       bench(iteration)(1) = computeError()
